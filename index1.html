@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ドッジボール選手評価</title>
+
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.5.0/firebase-database-compat.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
+  <style>
+    body {
+      font-family: "Yu Gothic", sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background-color: #fffcdb;
+    }
+    .container {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 20px;
+    }
+    .section {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .left {
+      flex: 1;
+      padding: 10px;
+    }
+    .right {
+      flex: 1;
+      padding: 10px;
+      margin-left: 20px;
+    }
+    .rating-table {
+      width: 100%;
+      text-align: left;
+      font-size: 18px;
+    }
+    .rating-table td {
+      padding: 5px;
+    }
+    .rank-display {
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .small-text {
+      font-size: 12px;
+    }
+    #hamburger {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 1001;
+  background: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.2);
+}
+
+#sideMenu a {
+  color: #333;
+  text-decoration: none;
+  display: block;
+  padding: 8px 0;
+}
+
+#sideMenu a:hover {
+  background-color: #000000;
+}
+
+    
+  </style>
+</head>
+<body>
+  
+  <div class="container">
+    <h1>ドッジボール選手評価</h1>
+
+    <div class="section">
+      <div class="left">
+        <h3>選手管理</h3>
+        <label>名前: <input type="text" id="playerName"></label><br>
+        <label>年齢
+          <select id="playerAge">
+            <option value="" disabled selected hidden>年齢を選択してください</option>
+            <option value="12">12</option>
+            <option value="13">13</option>
+            <option value="14">14</option>
+            <option value="15">15</option>
+            <option value="16">16</option>
+            <option value="17">17</option>
+            <option value="18">18</option>
+            <option value="19">19</option>
+            <option value="20">20</option>
+            <option value="21+">21以上</option>
+          </select>
+        </label><br>
+        <button onclick="savePlayer()">選手を保存</button>
+        <select id="playerList" onchange="selectPlayer()">
+          <option value="">選手を選択</option>
+        </select>
+      </div>
+      <div class="right">
+        <h2>パラメーター</h2>
+        <canvas id="radarChart"></canvas>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="left">
+        <h2>能力評価</h2>
+        <table class="rating-table">
+          <tr><td>コントロール:</td><td><select id="control" onchange="updateAll()"></select></td><td><span id="controlRank"></span></td></tr>
+          <tr><td>球速:</td><td><select id="speed" onchange="updateAll()"></select></td><td><span id="speedRank"></span></td></tr>
+          <tr><td>テクニック:</td><td><select id="technique" onchange="updateAll()"></select></td><td><span id="techniqueRank"></span></td></tr>
+          <tr><td>球威:</td><td><select id="ballPower" onchange="updateAll()"></select></td><td><span id="ballPowerRank"></span></td></tr>
+          <tr><td>ハンドキャッチ:</td><td><select id="handCatch" onchange="updateAll()"></select></td><td><span id="handCatchRank"></span></td></tr>
+          <tr><td>フェイント:</td><td><select id="feint" onchange="updateAll()"></select></td><td><span id="feintRank"></span></td></tr>
+          <tr><td>パスカット:</td><td><select id="passcut" onchange="updateAll()"></select></td><td><span id="passcutRank"></span></td></tr>
+          <tr><td>ディフェンスカット:</td><td><select id="defensecut" onchange="updateAll()"></select></td><td><span id="defensecutRank"></span></td></tr>
+          <tr><td>スピンコントロール:</td><td><select id="spinControl" onchange="updateAll()"></select></td><td><span id="spinControlRank"></span></td></tr>
+          <tr><td>スタミナ:</td><td><select id="stamina" onchange="updateAll()"></select></td><td><span id="staminaRank"></span></td></tr>
+          <tr><td>俊敏性:</td><td><select id="agility" onchange="updateAll()"></select></td><td><span id="agilityRank"></span></td></tr>
+          <tr><td>反射神経:</td><td><select id="reflexes" onchange="updateAll()"></select></td><td><span id="reflexesRank"></span></td></tr>
+          <tr><td>キャッチング:</td><td><select id="catching" onchange="updateAll()"></select></td><td><span id="catchingRank"></span></td></tr>
+          <tr><td>積極性:</td><td><select id="aggressiveness" onchange="updateAll()"></select></td><td><span id="aggressivenessRank"></span></td></tr>
+          <tr><td>コンディション安定:</td><td><select id="conditionStability" onchange="updateAll()"></select></td><td><span id="conditionStabilityRank"></span></td></tr>
+          <tr><td>視野:</td><td><select id="vision" onchange="updateAll()"></select></td><td><span id="visionRank"></span></td></tr>
+          <tr><td>思考力:</td><td><select id="thinking" onchange="updateAll()"></select></td><td><span id="thinkingRank"></span></td></tr>
+          <tr><td>連携力:</td><td><select id="teamwork" onchange="updateAll()"></select></td><td><span id="teamworkRank"></span></td></tr>
+          <tr><td>戦術理解:</td><td><select id="tacticalUnderstanding" onchange="updateAll()"></select></td><td><span id="tacticalUnderstandingRank"></span></td></tr>
+          <tr><td>攻撃意識:</td><td><select id="attackAwareness" onchange="updateAll()"></select></td><td><span id="attackAwarenessRank"></span></td></tr>
+          <tr><td>守備意識:</td><td><select id="defenseAwareness" onchange="updateAll()"></select></td><td><span id="defenseAwarenessRank"></span></td></tr>
+          <tr><td>プレッシャー耐性:</td><td><select id="pressureResistance" onchange="updateAll()"></select></td><td><span id="pressureResistanceRank"></span></td></tr>
+          <tr><td>ポジショニング:</td><td><select id="positioning" onchange="updateAll()"></select></td><td><span id="positioningRank"></span></td></tr>
+        </table>
+        <p><strong>合計:</strong> <span id="totalScore">1050</span>点</p>
+      </div>
+      <div class="right">
+        <h3>プレースタイル</h3>
+        <select id="playStyleSelect">
+          <option value="">選択してください</option>
+          <option value="オールラウンダー">オールラウンダー</option>
+          <option value="攻撃型">攻撃型</option>
+          <option value="守備型">守備型</option>
+          <option value="スピード型">スピード型</option>
+          <option value="その他">その他</option>
+        </select>
+        <input type="text" id="playStyle" placeholder="自由記入欄（例: 守備安定型）"><br>
+
+        <h3>メインポジション</h3>
+        <select id="mainPosition">
+          <option value="">選択してください</option>
+          <option value="内野アタッカー">内野アタッカー</option>
+          <option value="内野守備">内野守備</option>
+          <option value="外野">外野</option>
+          <option value="カット">カット</option>
+        </select>
+
+        <h3>サブポジション</h3>
+        <select id="subPosition">
+          <option value="">選択してください</option>
+          <option value="内野アタッカー">内野アタッカー</option>
+          <option value="内野守備">内野守備</option>
+          <option value="外野">外野</option>
+          <option value="カット">カット</option>
+          <option value="なし">なし</option>
+        </select>
+
+        <h3>その他特徴、癖</h3>
+        <textarea id="extraInfo" rows="3"></textarea>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="left">
+        <h3>総合評価</h3>
+        <p class="rank-display">ランク: <span id="rank">C</span></p>
+        <p class="small-text">SS: 1600~ / S: 1450~1599 / A: 1150~1449 / B: 700~1149 / C: 1~699</p>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ハンバーガーメニューのアイコン -->
+<div id="hamburger" style="cursor:pointer; font-size: 24px; user-select: none;">
+  &#9776; <!-- 三本線の記号 -->
+</div>
+
+<!-- サイドメニュー -->
+<div id="sideMenu" style="display:none; position:fixed; top:0; left:0; width:200px; height:100vh; background:#eee; padding:20px; box-shadow: 2px 0 5px rgba(0,0,0,0.2);">
+  <nav>
+    <ul style="list-style:none; padding:0;">
+      <li><a href="https://huuka1419.stars.ne.jp/testindex.html">能力評価ページ</a></li>
+      <li><a href="https://sakurasakura.static.jp/">選手一覧ページ</a></li>
+    </ul>
+  </nav>
+</div>
+
+
+  <!-- Firebase 初期化とアプリ処理 -->
+  <script>
+
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyC2sPMvyMQZDlys0McPPxZvpKhmztod2ho",
+      authDomain: "dodge-player-7a5ff.firebaseapp.com",
+      databaseURL: "https://dodge-player-7a5ff-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "dodge-player-7a5ff",
+      storageBucket: "dodge-player-7a5ff.firebasestorage.app",
+      messagingSenderId: "752106851441",
+      appId: "1:752106851441:web:7081da0e058980ab479fd0",
+      measurementId: "G-84DLRYS2X4"
+    };
+
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const params = [
+  "control", "speed", "technique", "ballPower", "handCatch", "feint","passcut","defensecut","spinControl", "stamina", "agility", "reflexes", "catching", "aggressiveness", "conditionStability", "vision", "thinking", "teamwork",  "tacticalUnderstanding", "attackAwareness","defenseAwareness", "pressureResistance", "positioning"
+];
+
+
+    let radarChart;
+
+    document.addEventListener("DOMContentLoaded", function () {
+      params.forEach(id => {
+        const select = document.getElementById(id);
+        for (let i = 1; i <= 100; i++) {
+          select.innerHTML += `<option value="${i}">${i}</option>`;
+        }
+        select.value = 50;
+      });
+      initRadarChart();
+      loadPlayers();
+      updateAll();
+    });
+
+    function updateRank(score, rankElement) {
+  if (score >= 95) rankElement.textContent = 'SS';
+  else if (score >= 85) rankElement.textContent = 'S';
+  else if (score >= 70) rankElement.textContent = 'A';
+  else if (score >= 45) rankElement.textContent = 'B';
+  else rankElement.textContent = 'C';
+}
+
+function updateAll() {
+  const values = params.map(id => parseInt(document.getElementById(id).value));
+  const total = values.reduce((a, b) => a + b, 0);
+  document.getElementById("totalScore").textContent = total;
+
+  params.forEach((id, i) => updateRank(values[i], document.getElementById(`${id}Rank`)));
+
+  const rank = document.getElementById("rank");
+if (total >= 1600) rank.textContent = 'SS';
+else if (total >= 1450) rank.textContent = 'S';
+else if (total >= 1150) rank.textContent = 'A';
+else if (total >= 700) rank.textContent = 'B';
+else rank.textContent = 'C';
+
+  radarChart.data.datasets[0].data = values;
+  radarChart.update();
+}
+
+    function savePlayer() {
+      const name = document.getElementById("playerName").value;
+      const age = document.getElementById("playerAge").value;
+      if (!name) return alert("名前を入力してください");
+
+      const data = {
+        age,
+        scores: {},
+        playStyle: document.getElementById("playStyle").value,
+        extraInfo: document.getElementById("extraInfo").value,
+        mainPosition: document.getElementById("mainPosition").value,
+        subPosition: document.getElementById("subPosition").value
+      };
+      params.forEach(id => data.scores[id] = document.getElementById(id).value);
+
+      db.ref("players/" + name).set(data, (err) => {
+        if (err) alert("保存に失敗しました");
+        else {
+          alert("保存しました");
+          loadPlayers();
+        }
+      });
+    }
+
+    function loadPlayers() {
+      db.ref("players").once("value", (snapshot) => {
+        const players = snapshot.val() || {};
+        const list = document.getElementById("playerList");
+        list.innerHTML = '<option value="">選手を選択</option>';
+        Object.keys(players).forEach(name => {
+          list.innerHTML += `<option value="${name}">${name}</option>`;
+        });
+      });
+    }
+
+    function selectPlayer() {
+      const name = document.getElementById("playerList").value;
+      if (!name) return;
+
+      db.ref("players/" + name).once("value", (snapshot) => {
+        const player = snapshot.val();
+        if (!player) return;
+
+        document.getElementById("playerName").value = name;
+        document.getElementById("playerAge").value = player.age || "";
+        document.getElementById("playStyle").value = player.playStyle || "";
+        document.getElementById("extraInfo").value = player.extraInfo || "";
+        document.getElementById("mainPosition").value = player.mainPosition || "";
+        document.getElementById("subPosition").value = player.subPosition || "";
+
+        params.forEach(id => {
+          document.getElementById(id).value = player.scores[id];
+        });
+
+        updateAll();
+      });
+    }
+
+    function initRadarChart() {
+      const ctx = document.getElementById("radarChart").getContext("2d");
+      radarChart = new Chart(ctx, {
+        type: "radar",
+        data: {
+          labels: params,
+          datasets: [{
+            label: "選手の能力",
+            data: Array(21).fill(5),
+            fill: true,
+            borderColor: "black",
+            backgroundColor: "rgba(0, 0, 0, 0.1)"
+          }]
+        },
+        options: {
+          scales: {
+            r: {
+              min: 0,
+              max: 100,
+              ticks: { stepSize: 10 }
+            }
+          }
+        }
+      });
+    }
+
+    const hamburger = document.getElementById('hamburger');
+const sideMenu = document.getElementById('sideMenu');
+
+hamburger.addEventListener('click', () => {
+  if (!sideMenu) return;
+
+  if (sideMenu.style.display === 'block') {
+    sideMenu.style.display = 'none';
+  } else {
+    sideMenu.style.display = 'block';
+  }
+});
+
+  </script>
+</body>
+</html>
+
+
